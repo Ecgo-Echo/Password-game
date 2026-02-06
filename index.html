@@ -141,7 +141,7 @@
         }},
         { text: "Chứa tên loài vật không dấu (meo, cho, ca, lon, ga, vit, voi, ran).", check: s => /(meo|cho|ca|lon|ga|vit|voi|ran)/i.test(s) },
         { text: "Độ dài mật khẩu phải là một số lẻ.", check: s => s.length % 2 !== 0 },
-        { text: "Phải kết thúc bằng cụm từ 'xong roi'.", check: s => s.endsWith('xong roi') },
+        { text: "Phải kết thúc bằng cụm từ 'xongroi'.", check: s => s.endsWith('xongroi') },
         { text: "Phải chứa ít nhất 2 ký tự đặc biệt (!, @, #, $, %).", check: s => (s.match(/[!@#$%]/g) || []).length >= 2 },
         { text: `Phải chứa tên ngày hôm nay viết liền không dấu (vd: '${randomDay}').`, check: s => s.toLowerCase().includes(randomDay) },
         { text: "Mật khẩu KHÔNG được chứa khoảng trắng.", check: s => !s.includes(' ') },
@@ -201,4 +201,5 @@
 
 </body>
 </html>
+
 
