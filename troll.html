@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Xác Thực Đa Tầng v6.0</title>
+    <style>
+        :root {
+            --primary: #00ff41;
+            --bg: #0a0a0a;
+            --card: #151515;
+            --error: #ff4b2b;
+        }
+
+        body {
+            background: var(--bg);
+            color: #eee;
+            font-family: 'Consolas', 'Courier New', monospace;
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+            margin: 0;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 550px;
+            background: var(--card);
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid #333;
+            box-shadow: 0 0 30px rgba(0, 255, 65, 0.05);
+        }
+
+        .timer {
+            text-align: center;
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 20px;
+            text-shadow: 0 0 5px var(--primary);
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            background: #000;
+            border: 2px solid #333;
+            border-radius: 8px;
+            color: var(--primary);
+            font-size: 1.1rem;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        input:focus { border-color: var(--primary); }
+
+        .rule-list { margin-top: 25px; display: flex; flex-direction: column; gap: 12px; }
+
+        .rule {
+            padding: 15px;
+            background: #1a1a1a;
+            border-left: 5px solid var(--error);
+            font-size: 0.95rem;
+            border-radius: 4px;
+            transition: 0.3s;
+        }
+
+        .rule.valid {
+            border-left-color: var(--primary);
+            opacity: 0.4;
+            text-decoration: line-through;
+            background: #0d150d;
+        }
+
+        #finalStep {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #333;
+            display: none;
+            text-align: center;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background: var(--primary);
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1rem;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="displayTime" class="timer">00:00</div>
+    <h2 style="text-align:center; color: var(--primary)">KIỂM TRA BẢO MẬT v6.0</h2>
+    
+    <input type="text" id="mainPw" placeholder="Nhập mật mã tối mật..." autocomplete="off">
+
+    <div id="rulesContainer" class="rule-list"></div>
+
+    <div id="finalStep">
+        <p>Giai đoạn cuối: Xác nhận lại mật mã</p>
+        <input type="password" id="confirmPw" placeholder="Nhập lại chính xác...">
+        <button id="submitBtn" style="margin-top: 15px">GỬI DỮ LIỆU</button>
+    </div>
+</div>
+
+<script>
+    const mainPw = document.getElementById('mainPw');
+    const rulesContainer = document.getElementById('rulesContainer');
+    const finalStep = document.getElementById('finalStep');
+    const displayTime = document.getElementById('displayTime');
+    let start = Date.now();
+
+    // 1. Dữ liệu ngẫu nhiên
+    const elements = [
+        { atomic: 1, sym: "H" }, { atomic: 6, sym: "C" }, { atomic: 8, sym: "O" },
+        { atomic: 13, sym: "Al" }, { atomic: 26, sym: "Fe" }, { atomic: 79, sym: "Au" }
+    ];
+    const randomE = elements[Math.floor(Math.random() * elements.length)];
+    const days = ["thuhai", "thuba", "thutu", "thunam", "thusau", "thubay", "chunhat"];
+    const randomDay = days[Math.floor(Math.random() * days.length)];
+
+    // 2. Kho 15 luật
+    const allRules = [
+        { text: "Mật khẩu phải dài ít nhất 10 ký tự.", check: s => s.length >= 10 },
+        { text: "Phải có ít nhất một chữ IN HOA.", check: s => /[A-Z]/.test(s) },
+        { text: `Phải chứa ký hiệu hóa học của nguyên tố số hiệu ${randomE.atomic} (${randomE.sym}).`, check: s => s.includes(randomE.sym) },
+        { text: "Phải có ít nhất một con số.", check: s => /[0-9]/.test(s) },
+        { text: "Phải chứa mã vùng Việt Nam (84).", check: s => s.includes('84') },
+        { text: "Phải có ký hiệu vô cực (∞).", check: s => s.includes('∞') },
+        { text: "Tổng các chữ số trong mật khẩu phải bằng 25.", check: s => {
+            let digits = s.match(/\d/g);
+            return digits ? digits.reduce((a, b) => a + parseInt(b), 0) === 25 : false;
+        }},
+        { text: "Chứa tên loài vật không dấu (meo, cho, ca, lon, ga, vit, voi, ran).", check: s => /(meo|cho|ca|lon|ga|vit|voi|ran)/i.test(s) },
+        { text: "Độ dài mật khẩu phải là một số lẻ.", check: s => s.length % 2 !== 0 },
+        { text: "Phải kết thúc bằng cụm từ 'xong roi'.", check: s => s.endsWith('xong roi') },
+        { text: "Phải chứa ít nhất 2 ký tự đặc biệt (!, @, #, $, %).", check: s => (s.match(/[!@#$%]/g) || []).length >= 2 },
+        { text: `Phải chứa tên ngày hôm nay viết liền không dấu (vd: '${randomDay}').`, check: s => s.toLowerCase().includes(randomDay) },
+        { text: "Mật khẩu KHÔNG được chứa khoảng trắng.", check: s => !s.includes(' ') },
+        { text: "Phải chứa ít nhất một chữ cái Hy Lạp (α, β, γ, δ).", check: s => /[αβγδ]/.test(s) },
+        { text: "Phải có ít nhất 3 chữ cái thường đứng cạnh nhau.", check: s => /[a-z]{3}/.test(s) }
+    ];
+
+    // 3. Trộn ngẫu nhiên và chọn 10 luật
+    const selectedRules = allRules.sort(() => Math.random() - 0.5).slice(0, 10);
+
+    // Timer
+    setInterval(() => {
+        let diff = Math.floor((Date.now() - start) / 1000);
+        let m = Math.floor(diff / 60).toString().padStart(2, '0');
+        let s = (diff % 60).toString().padStart(2, '0');
+        displayTime.innerText = m + ":" + s;
+    }, 1000);
+
+    function update() {
+        const val = mainPw.value;
+        rulesContainer.innerHTML = '';
+        let passCount = 0;
+
+        for (let i = 0; i < selectedRules.length; i++) {
+            const r = selectedRules[i];
+            const ok = r.check(val);
+            const div = document.createElement('div');
+            div.className = `rule ${ok ? 'valid' : ''}`;
+            div.innerText = `[Quy tắc ${i + 1}] ${r.text}`;
+            rulesContainer.appendChild(div);
+
+            if (ok) passCount++;
+            else break; 
+        }
+
+        if (passCount === selectedRules.length) {
+            finalStep.style.display = 'block';
+            mainPw.readOnly = true;
+        } else {
+            finalStep.style.display = 'none';
+        }
+    }
+
+    mainPw.addEventListener('input', update);
+
+    document.getElementById('submitBtn').onclick = () => {
+        if (document.getElementById('confirmPw').value === mainPw.value) {
+            alert("XÁC MINH HOÀN TẤT!\nBạn đã vượt qua bài kiểm tra.");
+            window.location.href = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+        } else {
+            alert("Mật khẩu xác nhận không khớp!");
+        }
+    };
+
+    update();
+</script>
+
+</body>
+</html>
